@@ -1,0 +1,144 @@
+import customtkinter as ctk
+import requests
+import threading
+
+ctk.set_appearance_mode("dark")
+ctk.set_default_color_theme("blue")
+
+
+# countries list (can add more later)
+COUNTRIES = {
+    "🇮🇳 India": "INR",
+    "🇺🇸 United States": "USD",
+    "🇸🇦 Saudi Arabia": "SAR",
+    "🇦🇪 UAE": "AED",
+    "🇬🇧 United Kingdom": "GBP",
+    "🇪🇺 Europe": "EUR",
+    "🇯🇵 Japan": "JPY",
+    "🇨🇳 China": "CNY",
+    "🇨🇦 Canada": "CAD",
+    "🇦🇺 Australia": "AUD"
+}
+
+history = []  # stores previous conversions
+
+
+def convert():
+
+    amt = amount_entry.get()
+
+    if amt == "":
+        result_label.configure(text="⚠ enter amount first")
+        return
+
+    # tried isnumeric() but it doesnt work for decimals so using try except
+    try:
+        amt = float(amt)
+    except:
+        result_label.configure(text="⚠ invalid number")
+        return
+
+    if amt <= 0:
+        result_label.configure(text="⚠ enter positive amount")
+        return
+
+    f = from_box.get()
+    t = to_box.get()
+
+    if f == t:
+        result_label.configure(text="⚠ choose different currencies")
+        return
+
+    convert_btn.configure(state="disabled", text="please wait...")
+    result_label.configure(text="getting rates...")
+
+    # without thread the window freezes, found this fix on stackoverflow
+    th = threading.Thread(target=get_rate, args=(amt, COUNTRIES[f], COUNTRIES[t]))
+    th.daemon = True
+    th.start()
+
+
+def get_rate(amt, from_code, to_code):
+
+    try:
+        url = "https://open.er-api.com/v6/latest/" + from_code
+        res = requests.get(url, timeout=10)
+        data = res.json()
+
+        rate = data["rates"][to_code]
+        final = amt * rate
+
+        app.after(0, update_result, amt, from_code, final, to_code)
+
+    except Exception as e:
+        app.after(0, show_err, str(e))
+
+
+def update_result(amt, from_code, final, to_code):
+
+    txt = f"{amt:.2f} {from_code}  =  {final:.2f} {to_code}"
+    result_label.configure(text=txt)
+
+    # add to history
+    history.append(f"{amt:.2f} {from_code} ➜ {final:.2f} {to_code}")
+    if len(history) > 10:
+        history.pop(0)  # remove oldest if more than 10
+
+    history_box.delete("1.0", "end")
+    history_box.insert("end", "\n".join(history))
+
+    convert_btn.configure(state="normal", text="🚀 Convert")
+
+
+def show_err(msg):
+    result_label.configure(text="error :( " + msg)
+    convert_btn.configure(state="normal", text="🚀 Convert")
+
+
+def swap_countries():
+    a = from_box.get()
+    b = to_box.get()
+    from_box.set(b)
+    to_box.set(a)
+
+
+def clear_hist():
+    history.clear()
+    history_box.delete("1.0", "end")
+
+
+# ----- UI below -----
+
+app = ctk.CTk()
+app.title("Currency Converter")
+app.geometry("800x660")
+
+ctk.CTkLabel(app, text="🌍 Currency Converter Pro", font=("Arial", 28, "bold")).pack(pady=20)
+
+amount_entry = ctk.CTkEntry(app, placeholder_text="Enter amount", width=250)
+amount_entry.pack(pady=10)
+
+from_box = ctk.CTkComboBox(app, values=list(COUNTRIES.keys()), width=300)
+from_box.set("🇮🇳 India")
+from_box.pack(pady=8)
+
+to_box = ctk.CTkComboBox(app, values=list(COUNTRIES.keys()), width=300)
+to_box.set("🇺🇸 United States")
+to_box.pack(pady=8)
+
+ctk.CTkButton(app, text="🔄 Swap", command=swap_countries, width=120).pack(pady=6)
+
+convert_btn = ctk.CTkButton(app, text="🚀 Convert", command=convert, width=150)
+convert_btn.pack(pady=10)
+
+result_label = ctk.CTkLabel(app, text="result will show here", font=("Arial", 20))
+result_label.pack(pady=20)
+
+# history section
+ctk.CTkLabel(app, text="History:").pack()
+history_box = ctk.CTkTextbox(app, width=500, height=150)
+history_box.pack(pady=8)
+
+ctk.CTkButton(app, text="clear history", command=clear_hist, width=130).pack(pady=4)
+
+app.mainloop()
