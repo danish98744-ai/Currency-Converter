@@ -6,7 +6,6 @@ ctk.set_appearance_mode("dark")
 ctk.set_default_color_theme("blue")
 
 
-# countries list (can add more later)
 COUNTRIES = {
     "🇮🇳 India": "INR",
     "🇺🇸 United States": "USD",
@@ -20,7 +19,7 @@ COUNTRIES = {
     "🇦🇺 Australia": "AUD"
 }
 
-history = []  # stores previous conversions
+history = []  
 
 
 def convert():
@@ -31,7 +30,7 @@ def convert():
         result_label.configure(text="⚠ enter amount first")
         return
 
-    # tried isnumeric() but it doesnt work for decimals so using try except
+    
     try:
         amt = float(amt)
     except:
@@ -52,7 +51,7 @@ def convert():
     convert_btn.configure(state="disabled", text="please wait...")
     result_label.configure(text="getting rates...")
 
-    # without thread the window freezes, found this fix on stackoverflow
+
     th = threading.Thread(target=get_rate, args=(amt, COUNTRIES[f], COUNTRIES[t]))
     th.daemon = True
     th.start()
@@ -79,10 +78,10 @@ def update_result(amt, from_code, final, to_code):
     txt = f"{amt:.2f} {from_code}  =  {final:.2f} {to_code}"
     result_label.configure(text=txt)
 
-    # add to history
+
     history.append(f"{amt:.2f} {from_code} ➜ {final:.2f} {to_code}")
     if len(history) > 10:
-        history.pop(0)  # remove oldest if more than 10
+        history.pop(0)  
 
     history_box.delete("1.0", "end")
     history_box.insert("end", "\n".join(history))
@@ -107,7 +106,6 @@ def clear_hist():
     history_box.delete("1.0", "end")
 
 
-# ----- UI below -----
 
 app = ctk.CTk()
 app.title("Currency Converter")
@@ -134,7 +132,6 @@ convert_btn.pack(pady=10)
 result_label = ctk.CTkLabel(app, text="result will show here", font=("Arial", 20))
 result_label.pack(pady=20)
 
-# history section
 ctk.CTkLabel(app, text="History:").pack()
 history_box = ctk.CTkTextbox(app, width=500, height=150)
 history_box.pack(pady=8)
